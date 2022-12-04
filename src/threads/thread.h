@@ -99,7 +99,7 @@ struct thread
    struct list_elem allelem;  /* List element for all threads list. */
    bool finish;
    int exit_error;
-   int64_t sleep_ticks;       // Sleeping thread tick length
+   int64_t sleep_ticks; // Sleeping thread tick length
 
    /* Shared between thread.c and synch.c. */
    struct list_elem elem; /* List element. */
@@ -126,11 +126,15 @@ struct thread
    fp_t recent_cpu;
 
    // Donations
-   struct list donors_list;            /* list of all potential donors */
-   struct list_elem donor_element;     /* specific donor in list */
-   int original_priority;              /* save the base priority of the thread */
-   struct thread *locker_thread;       /* Thread holding the desired lock of current thread */
-   struct lock *blocking_lock;         /* Lock that the current thread is waiting for */
+   struct list donors_list;        /* list of all potential donors */
+   struct list_elem donor_element; /* specific donor in list */
+   int original_priority;          /* save the base priority of the thread */
+   struct thread *locker_thread;   /* Thread holding the desired lock of current thread */
+   struct lock *blocking_lock;     /* Lock that the current thread is waiting for */
+
+   // Supplemental Page Table
+   struct list supplemental_pt;
+   struct lock supplemental_pt_lock;
 };
 
 struct child
@@ -186,7 +190,7 @@ bool sort_sleep(const struct list_elem *a, const struct list_elem *b, void *aux)
 
 // priority scheduling
 void sort_ready_list(void);
-bool sort_priority (const struct list_elem *a, const struct list_elem *b, void *aux);
+bool sort_priority(const struct list_elem *a, const struct list_elem *b, void *aux);
 
 // Advanced priority scheduling
 void set_advanced_priority(struct thread *t, void *aux);
