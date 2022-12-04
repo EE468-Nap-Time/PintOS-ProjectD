@@ -1,6 +1,6 @@
 #include "vm/frame.h"
 
-void frame_table_init()
+void frame_table_init(void)
 {
     list_init(&frame_table);
     lock_init(&frame_table_lock);
@@ -63,7 +63,7 @@ void free_frame(void *page)
 
 /* Evict page from frame. If no frame can be evicted without allocating a swap slot, but swap is full, panic the kernel.
  */
-bool evict_page()
+bool evict_page(void)
 {
     if (list_size(&frame_table) == 0)
     {

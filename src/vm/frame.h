@@ -2,6 +2,7 @@
 #define _VM_FRAME_H
 
 #include <list.h>
+#include "threads/synch.h"
 #include "threads/thread.h"
 #include "threads/palloc.h"
 #include "userprog/pagedir.h"
@@ -16,9 +17,9 @@ struct frame_table_entry
     struct thread *owner_td;
 };
 
-void frame_table_init();
-void *get_frame();
+void frame_table_init(void);
+void *get_frame(enum palloc_flags);
 void free_frame(void *page);
-bool evict_page();
+bool evict_page(void);
 
 #endif // _VM_FRAME_H
