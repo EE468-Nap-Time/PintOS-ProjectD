@@ -15,6 +15,8 @@ static long long page_fault_cnt;
 static void kill(struct intr_frame *);
 static void page_fault(struct intr_frame *);
 
+void exit(int status);
+
 /* Registers handlers for interrupts that can be caused by user
    programs.
 
@@ -154,14 +156,26 @@ page_fault(struct intr_frame *f)
 
    bool page_loaded = false;
 
-   if (not_present && fault_addr != NULL && is_user_vaddr(fault_addr))
+   if (!not_present || fault_addr == NULL || !is_user_vaddr(fault_addr))
    {
-      struct supplemental_pte *pte = get_supplemental_pte(fault_addr);
+      syscall_exit(-1);
+   }
 
-      // Load Page
-      if (pte != NULL && !pte->loaded)
+   struct supplemental_pte *pte = get_supplemental_pte(fault_addr);
+
+   // Load Page
+   if (pte != NULL && !pte->loaded)
+   {
+      page_loaded = load_page(pte);
+   }
+   else
+   {
+      bool stack_access = (PHYS_BASE - pg_round_down(fault_addr)) <= MAX_STACK_SIZE && fault_addr >= (f->esp - 32);
+
+      // Grow stack
+      if (stack_access)
       {
-         page_loaded = load_page(pte);
+         page_loaded = grow_stack(fault_addr);
       }
    }
 
@@ -175,6 +189,7 @@ page_fault(struct intr_frame *f)
              not_present ? "not present" : "rights violation",
              write ? "writing" : "reading",
              user ? "user" : "kernel");
-      kill(f);
+      // kill(f);
+      syscall_exit(-1);
    }
 }
