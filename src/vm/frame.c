@@ -28,14 +28,14 @@ void *get_frame(enum palloc_flags flags)
         if (!evict_page())
             PANIC("Unable to evict frame");
 
-        page = palloc_get_page(flags);
-        // Add entry to frame table
-        struct frame_table_entry *entry = malloc(sizeof(struct frame_table_entry));
-        entry->page = page;
-        entry->owner_td = thread_current();
-        lock_acquire(&frame_table_lock);
-        list_push_back(&frame_table, &entry->elem);
-        lock_release(&frame_table_lock);
+        // page = palloc_get_page(flags);
+        // // Add entry to frame table
+        // struct frame_table_entry *entry = malloc(sizeof(struct frame_table_entry));
+        // entry->page = page;
+        // entry->owner_td = thread_current();
+        // lock_acquire(&frame_table_lock);
+        // list_push_back(&frame_table, &entry->elem);
+        // lock_release(&frame_table_lock);
     }
 
     return page;
@@ -54,7 +54,6 @@ void free_frame(void *page)
             free(entry);
             break;
         }
-        free(entry);
     }
 
     palloc_free_page(page);
@@ -80,13 +79,20 @@ bool evict_page(void)
         struct frame_table_entry *entry = list_entry(e, struct frame_table_entry, elem);
 
         // If page is not accessed
-        if (pagedir_is_accessed(entry->owner_td->pagedir, entry->page) == 0)
+        if (!pagedir_is_accessed(entry->owner_td->pagedir, entry->page))
         {
             evict_entry = entry;
-            free(entry);
+
+            // Youngest frame in end of frame table
+            list_remove(e);
+            list_push_back(&frame_table, e);
             break;
         }
-        free(entry);
+        else
+        {
+            // Reset access for page
+            pagedir_set_accessed(entry->owner_td->pagedir, entry->page, false);
+        }
     }
 
     // All pages were accessed, just evict first one in the list
@@ -94,9 +100,6 @@ bool evict_page(void)
     {
         evict_entry = list_entry(list_begin(&frame_table), struct frame_table_entry, elem);
     }
-
-    evict_entry->owner_td = thread_current()->tid;
-    evict_entry->page = NULL;
 
     lock_release(&frame_table_lock);
 
