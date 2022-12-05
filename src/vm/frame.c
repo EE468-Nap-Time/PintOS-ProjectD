@@ -101,6 +101,8 @@ bool evict_page(void)
         evict_entry = list_entry(list_begin(&frame_table), struct frame_table_entry, elem);
     }
 
+    evict_entry->page = NULL;
+
     lock_release(&frame_table_lock);
 
     return true;
