@@ -83,3 +83,17 @@ bool load_page(struct supplemental_pte *pte)
 
     return false;
 }
+
+bool grow_stack(void *vaddr)
+{
+    void *page = get_frame(PAL_USER);
+    if (page == NULL)
+        return false;
+
+    if (!pagedir_set_page(thread_current()->pagedir, pg_round_down(vaddr), page, true))
+    {
+        free_frame(page);
+    }
+
+    return true;
+}

@@ -164,6 +164,16 @@ page_fault(struct intr_frame *f)
          page_loaded = load_page(pte);
       }
    }
+   else
+   {
+      bool stack_access = (PHYS_BASE - pg_round_down(fault_addr)) <= MAX_STACK_SIZE && fault_addr >= (f->esp - 32);
+
+      // Grow stack
+      if (stack_access)
+      {
+         page_loaded = grow_stack(fault_addr);
+      }
+   }
 
    if (!page_loaded)
    {
