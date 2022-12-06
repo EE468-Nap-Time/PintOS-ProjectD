@@ -6,6 +6,7 @@
 #include "threads/thread.h"
 #include "threads/palloc.h"
 #include "userprog/pagedir.h"
+#include "vm/page.h"
 
 struct list frame_table;
 struct lock frame_table_lock;

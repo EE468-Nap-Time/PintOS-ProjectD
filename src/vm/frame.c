@@ -100,10 +100,38 @@ bool evict_page(void)
     {
         evict_entry = list_entry(list_begin(&frame_table), struct frame_table_entry, elem);
     }
-
-    evict_entry->page = NULL;
-
     lock_release(&frame_table_lock);
+
+    // Find supplemental PTE in frame table entry
+    struct supplemental_pte *pte = NULL;
+    struct list *pt = &(evict_entry->owner_td)->supplemental_pt;
+    for (struct list_elem *e = list_begin(pt); e != list_end(pt); e = list_next(e))
+    {
+        pte = list_entry(e, struct supplemental_pte, elem);
+        uint32_t *page = pagedir_get_page(evict_entry->owner_td->pagedir, pte->vaddr);
+        if (page == evict_entry->page)
+        {
+            break;
+        }
+        pte = NULL;
+    }
+
+    if (pte == NULL)
+    {
+        return false;
+    }
+
+    // Swap
+    size_t swap_index = swap_out(pte->vaddr);
+
+    pte->type = PAGE_SWAP;
+    pte->loaded = false;
+    pte->swap_index = swap_index;
+
+    // Free Page
+    pagedir_clear_page(evict_entry->owner_td->pagedir, pte->vaddr);
+    list_remove(&evict_entry->elem);
+    palloc_free_page(evict_entry->page);
 
     return true;
 }

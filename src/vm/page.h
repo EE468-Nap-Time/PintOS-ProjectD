@@ -14,6 +14,7 @@ typedef enum
 {
     PAGE_SWAP,
     PAGE_FILE,
+    PAGE_STACK,
 } PAGE_TYPE;
 
 struct supplemental_pte

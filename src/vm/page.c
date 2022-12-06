@@ -90,10 +90,24 @@ bool grow_stack(void *vaddr)
     if (page == NULL)
         return false;
 
+    struct supplemental_pte *pte = malloc(sizeof(struct supplemental_pte));
+    pte->vaddr = pg_round_down(vaddr);
+    pte->loaded = true;
+    pte->fp_writable = true;
+    pte->swap_writable = true;
+    pte->type = PAGE_STACK;
+
     if (!pagedir_set_page(thread_current()->pagedir, pg_round_down(vaddr), page, true))
     {
         free_frame(page);
+        free(pte);
+        return false;
     }
+
+    struct thread *td = thread_current();
+    lock_acquire(&td->supplemental_pt_lock);
+    list_push_back(&td->supplemental_pt, &pte->elem);
+    lock_release(&td->supplemental_pt_lock);
 
     return true;
 }
