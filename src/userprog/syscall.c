@@ -130,8 +130,13 @@ static void syscall_handler(struct intr_frame *f)
       syscall_exit(-1);
       break;
     }
-
     syscall_close((int)*(esp + 1));
+    break;
+  case SYS_MMAP:
+    f->eax = syscall_mmap((int)*(esp + 4), (void *)(esp + 8));
+    break;
+  case SYS_MUNMAP:
+    syscall_munmap((int)*(esp + 4));
     break;
   }
 }
@@ -428,6 +433,100 @@ void syscall_close(int fd)
   // Unlock once done closing file
   lock_release(&filesys_lock);
 }
+
+/* maps a file fd into the process's virtual address space starting at addr
+ */
+mapid_t syscall_mmap(int fd, void *addr) {
+  struct thread *td = thread_current();
+  
+  /* Call to mmap fails under the following conditions: */
+
+  // If fd is 0 or 1 (console input and output)
+  if ( fd==0 || fd==1 ) { return -1; }
+
+  // If fd has a length of 0 bytes
+  lock_acquire(&filesys_lock);
+
+  struct file *fd_struct = getFile(fd); 
+  if (fd_struct == NULL) {return -1; }
+
+  int filesize = file_length(fd_struct);
+  if ( filesize==0 ) {
+    lock_release(&filesys_lock);
+    return -1;
+  }
+
+  lock_release(&filesys_lock);
+
+  // If addr is not page-aligned
+  if(pg_round_down(addr) != addr){ return -1; }
+
+  // If page range overlaps any existing mapped pages
+  int page_count = filesize / PGSIZE;  // Find the number of pages needed for the file
+	if( filesize % PGSIZE != 0 )
+		page_count++;
+	void *vaddr = addr;
+
+	for(int i =0; i < page_count; i++){   // Check each page
+		if(get_supplemental_pte(vaddr+i*PGSIZE) != NULL) { return -1; }
+	}
+
+  // If addr is zero
+  if ( (int)addr==0 ) { return -1; }
+
+  /* If failure conditions not met, proceed with mapping */
+
+	lock_acquire(&filesys_lock);
+  int offset = 0;
+
+	/* Map the pages */
+  for(int i =0; i < page_count; i++){
+		set_supplemental_pte(fd_struct, vaddr+i*PGSIZE, true, offset, PGSIZE, 0);
+		offset += PGSIZE;
+	}
+  
+	lock_release(&filesys_lock);
+
+  int id = td->map_id;
+  td->map_id++;
+
+	return id;
+}
+
+
+void syscall_munmap(mapid_t mapping)
+{
+  struct thread * t = thread_current();
+
+	struct list * l = &t->supplemental_pt;
+	struct supplemental_pte * elem;
+
+	lock_acquire(&filesys_lock);
+
+  // Loop through the page table and find the element with the matching map_id
+	for(struct list_elem *e = list_begin(l); e!= list_end(l); e = list_next(e)){
+    	elem = list_entry(e, struct supplemental_pte, elem);
+
+    	if(t->map_id == mapping){
+        // get the page table entry from the list
+        struct supplemental_pte *ste = get_supplemental_pte(elem->vaddr);
+    		ASSERT(ste->vaddr == elem->vaddr);
+
+        // delete entry from the list
+    		if(ste->type == PAGE_FILE){
+    			delete_supplemental_pte(ste->vaddr);
+    		}
+
+    		list_remove(e);
+    		struct list_elem temp = *e;	
+    		free(elem);
+    		e = &temp;	
+    	}
+	}
+
+	lock_release(&filesys_lock);
+}
+
 
 struct file *getFile(int fd)
 {

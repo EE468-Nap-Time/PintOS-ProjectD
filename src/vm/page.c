@@ -18,6 +18,28 @@ struct supplemental_pte *get_supplemental_pte(void *vaddr)
     return NULL;
 }
 
+void set_supplemental_pte(struct file *file, void *vaddr, bool writeable, int offset, int read, int zero)
+{
+    struct supplemental_pte * entry;
+    struct list *pt = &thread_current()->supplemental_pt;
+
+	/* Create entry in supplemental table */
+	entry = malloc(sizeof(struct supplemental_pte));
+    entry->vaddr = vaddr;
+	entry->fp = file;
+    entry->type = PAGE_FILE;
+    entry->fp_offset = offset;
+    entry->read_bytes = read;
+	entry->zero_bytes = zero;
+	entry->fp_writable = writeable; 
+    entry->loaded = false;
+
+    struct list_elem *elem = &entry->elem;
+
+	// insert element. 
+	list_push_back(pt, elem);
+}
+
 void free_supplemental_pte(struct supplemental_pte *pte)
 {
     struct thread *td = thread_current();
@@ -84,6 +106,26 @@ bool load_page(struct supplemental_pte *pte)
     return false;
 }
 
+void delete_supplemental_pte(void * vaddr){
+
+    struct supplemental_pte * pte_to_remove; 
+
+    struct list *pt = &thread_current()->supplemental_pt;
+    for (struct list_elem *e = list_begin(pt); e != list_end(pt); e = list_next(e))
+    {
+        struct supplemental_pte *pte = list_entry(e, struct supplemental_pte, elem);
+        if (pte->vaddr == vaddr)
+        {
+            pte_to_remove = pte;
+            break;
+        }
+        free(pte);
+    }
+
+    struct list_elem *elem = &pte_to_remove->elem;
+	list_remove(elem);
+}
+
 bool grow_stack(void *vaddr)
 {
     void *page = get_frame(PAL_USER);
@@ -97,3 +139,5 @@ bool grow_stack(void *vaddr)
 
     return true;
 }
+
+

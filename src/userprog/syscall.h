@@ -5,6 +5,7 @@
 #include "threads/synch.h"
 #include "threads/thread.h"
 #include "stdbool.h"
+#include "vm/page.h"
 #include <stdio.h>
 
 struct lock filesys_lock;
@@ -32,6 +33,8 @@ int syscall_write(int fd, const void *buffer, unsigned size);
 void syscall_seek(int fd, unsigned position);
 unsigned syscall_tell(int fd);
 void syscall_close(int fd);
+mapid_t syscall_mmap(int fd, void *addr);
+void syscall_munmap(mapid_t mapping);
 
 void close_all_files(struct list *files);
 

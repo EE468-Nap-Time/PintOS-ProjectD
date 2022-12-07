@@ -135,6 +135,7 @@ struct thread
    // Supplemental Page Table
    struct list supplemental_pt;
    struct lock supplemental_pt_lock;
+   int map_id;
 };
 
 struct child
