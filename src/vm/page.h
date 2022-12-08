@@ -37,8 +37,10 @@ struct supplemental_pte
 };
 
 struct supplemental_pte *get_supplemental_pte(void *);
+void set_supplemental_pte(struct file *file, void *vaddr, bool writeable, int offset, int read, int zero);
 void free_supplemental_pte(struct supplemental_pte *pte);
 bool load_page(struct supplemental_pte *pte);
 bool grow_stack(void *);
+void delete_supplemental_pte(void * vaddr);
 
 #endif // _VM_PAGE_H

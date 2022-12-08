@@ -530,6 +530,7 @@ init_thread(struct thread *t, const char *name, int priority)
   t->fd = 2;                    // Two lists (child thread and file list)
   t->finish = false;
   t->exit_error = -1;
+  t->map_id = 0;
 
   if (thread_mlfqs)
   {
